@@ -18,8 +18,8 @@ def equipo_avg():
         if avg.get('data-col') == '14':
             avgs.append(avg.text)
 
-    df = pd.DataFrame({"EQUIPO": teams, "LIGA": leagues, "AVERAGE": avgs})
-    df.AVERAGE = df.AVERAGE.astype(float)
+    df = pd.DataFrame({"TEAM": teams, "LIGA": leagues, "AVG_TEAM": avgs})
+    df.AVG_TEAM = df.AVG_TEAM.astype(float)
     return df
 
 
@@ -41,16 +41,16 @@ def records():
             home_record = team.find('td.col-12', first=True).text
             away_record = team.find('td.col-13', first=True).text
             data.append({
-                'EQUIPO': team_name,
-                'VICTORIAS': wins,
-                'DERROTAS': losses,
-                'PORCENTAJE_VICTORIAS': win_percentage,
+                'TEAM': team_name,
+                'WINS': wins,
+                'LOSSES': losses,
+                '%WIN': win_percentage,
                 'RECORD HOMECLUB': home_record,
                 'RECORD VISITANTE': away_record})
     df_recor = pd.DataFrame(data)
     df_recor = df_recor.drop_duplicates()
     df_equipo_avg = equipo_avg()
-    MLB = pd.merge(df_recor,df_equipo_avg, on="EQUIPO", how="inner")
+    MLB = pd.merge(df_recor,df_equipo_avg, on="TEAM", how="inner")
     # Mapeo de nombres completos a disminutivos
     team_mapping = {
     "Tampa Bay Rays": "TB",
@@ -90,17 +90,17 @@ def records():
     MLB['win_hc'] = MLB['win_hc'].astype(int)
     MLB['lost_hc'] = MLB['lost_hc'].astype(int)
     # Calcular el porcentaje de victorias
-    MLB['%winhc'] = round(MLB['win_hc'] / (MLB['win_hc'] + MLB['lost_hc']),3)
+    MLB['%WIN-HC'] = round(MLB['win_hc'] / (MLB['win_hc'] + MLB['lost_hc']),3)
 
     MLB[['win_v', 'lost_v']] = MLB['RECORD VISITANTE'].str.split('-', expand=True)
     # Convertir las nuevas columnas a números enteros
     MLB['win_v'] = MLB['win_v'].astype(int)
     MLB['lost_v'] = MLB['lost_v'].astype(int)
     # Calcular el porcentaje de victorias
-    MLB['%winv'] = round(MLB['win_v'] / (MLB['win_v'] + MLB['lost_v']),3)
+    MLB['%WIN-V'] = round(MLB['win_v'] / (MLB['win_v'] + MLB['lost_v']),3)
     # Reemplazar los nombres completos por los disminutivos en el dataframe
     MLB.drop(columns=['RECORD HOMECLUB','RECORD VISITANTE', "win_hc","lost_hc","win_v","lost_v"],inplace=True)
-    MLB["EQUIPO"] = MLB["EQUIPO"].map(team_mapping)
+    MLB["TEAM"] = MLB["TEAM"].map(team_mapping)
 
     return MLB
 
