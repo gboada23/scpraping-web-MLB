@@ -51,6 +51,57 @@ def records():
     df_recor = df_recor.drop_duplicates()
     df_equipo_avg = equipo_avg()
     MLB = pd.merge(df_recor,df_equipo_avg, on="EQUIPO", how="inner")
+    # Mapeo de nombres completos a disminutivos
+    team_mapping = {
+    "Tampa Bay Rays": "TB",
+    "Texas Rangers": "TEX",
+    "Baltimore Orioles": "BAL",
+    "Arizona Diamondbacks": "ARI",
+    "Los Angeles Dodgers": "LAD",
+    "Atlanta Braves": "ATL",
+    "Houston Astros": "HOU",
+    "New York Yankees": "NYY",
+    "Minnesota Twins": "MIN",
+    "New York Mets": "NYM",
+    "Toronto Blue Jays": "TOR",
+    "Boston Red Sox": "BOS",
+    "Milwaukee Brewers": "MIL",
+    "Seattle Mariners": "SEA",
+    "Los Angeles Angels": "LAA",
+    "Pittsburgh Pirates": "PIT",
+    "Miami Marlins": "MIA",
+    "San Francisco Giants": "SF",
+    "Detroit Tigers": "DET",
+    "Cincinnati Reds": "CIN",
+    "San Diego Padres": "SD",
+    "Cleveland Guardians": "CLE",
+    "Philadelphia Phillies": "PHI",
+    "St. Louis Cardinals": "STL",
+    "Chicago Cubs": "CHC",
+    "Washington Nationals": "WSH",
+    "Colorado Rockies": "COL",
+    "Chicago White Sox": "CWS",
+    "Kansas City Royals": "KC",
+    "Oakland Athletics": "OAK"
+}
+    # Supongamos que tu DataFrame se llama df y la columna se llama 'VISITANTE'
+    MLB[['win_hc', 'lost_hc']] = MLB['RECORD HOMECLUB'].str.split('-', expand=True)
+    # Convertir las nuevas columnas a números enteros
+    MLB['win_hc'] = MLB['win_hc'].astype(int)
+    MLB['lost_hc'] = MLB['lost_hc'].astype(int)
+    # Calcular el porcentaje de victorias
+    MLB['%winhc'] = round(MLB['win_hc'] / (MLB['win_hc'] + MLB['lost_hc']),3)
+
+    MLB[['win_v', 'lost_v']] = MLB['RECORD VISITANTE'].str.split('-', expand=True)
+    # Convertir las nuevas columnas a números enteros
+    MLB['win_v'] = MLB['win_v'].astype(int)
+    MLB['lost_v'] = MLB['lost_v'].astype(int)
+    # Calcular el porcentaje de victorias
+    MLB['%winv'] = round(MLB['win_v'] / (MLB['win_v'] + MLB['lost_v']),3)
+    # Reemplazar los nombres completos por los disminutivos en el dataframe
+    MLB.drop(columns=['RECORD HOMECLUB','RECORD VISITANTE', "win_hc","lost_hc","win_v","lost_v"],inplace=True)
+    MLB["EQUIPO"] = MLB["EQUIPO"].map(team_mapping)
+
     return MLB
 
 
