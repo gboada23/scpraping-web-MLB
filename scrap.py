@@ -8,11 +8,9 @@ def equipo_avg():
     url = "https://www.mlb.com/es/stats/team"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
-
     teams = [span.text for span in soup.select('span.full-3fV3c9pF')]
     leagues = [td.text for td in soup.select('td.col-group-end-2UJpJVwW.number-aY5arzrB.align-left-3L2SU-Mk.is-table-pinned-1WfPW2jT')]
-    avg_elements = soup.select('td.col-group-start-sa9unvY0.number-aY5arzrB.align-right-3nN_D3xs.is-table-pinned-1WfPW2jT')
-    
+    avg_elements = soup.select('td.col-group-start-sa9unvY0.number-aY5arzrB.align-right-3nN_D3xs.is-table-pinned-1WfPW2jT') 
     avgs = []
     for avg in avg_elements:
         if avg.get('data-col') == '14':
@@ -100,10 +98,9 @@ def records():
     MLB['%WIN-V'] = round(MLB['win_v'] / (MLB['win_v'] + MLB['lost_v']),3)
     # Reemplazar los nombres completos por los disminutivos en el dataframe
     MLB.drop(columns=['RECORD HOMECLUB','RECORD VISITANTE', "win_hc","lost_hc","win_v","lost_v"],inplace=True)
+    MLB = MLB[['TEAM', 'LIGA', 'WINS','LOSSES','%WIN','%WIN-HC','%WIN-V','AVG_TEAM']]
     MLB["TEAM"] = MLB["TEAM"].map(team_mapping)
 
     return MLB
-
-
 DF_TEAM_STATS = records()
 print(DF_TEAM_STATS)
