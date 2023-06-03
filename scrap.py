@@ -68,8 +68,7 @@ def records():
     df_equipo_avg = equipo_avg()
     MLB = pd.merge(df_recor,df_equipo_avg, on="TEAM", how="inner")
     # Mapeo de nombres completos a disminutivos
-    team_mapping = {
-    "Tampa Bay Rays": "TB",
+    team_mapping = {"Tampa Bay Rays": "TB",
     "Texas Rangers": "TEX",
     "Baltimore Orioles": "BAL",
     "Arizona Diamondbacks": "ARI",
@@ -98,18 +97,15 @@ def records():
     "Colorado Rockies": "COL",
     "Chicago White Sox": "CWS",
     "Kansas City Royals": "KC",
-    "Oakland Athletics": "OAK"
-}
-    # Supongamos que tu DataFrame se llama df y la columna se llama 'VISITANTE'
+    "Oakland Athletics": "OAK"}
     MLB[['win_hc', 'lost_hc']] = MLB['RECORD HOMECLUB'].str.split('-', expand=True)
-    # Convertir las nuevas columnas a números enteros
+    # Convertimos las nuevas columnas a enteros
     MLB['win_hc'] = MLB['win_hc'].astype(int)
     MLB['lost_hc'] = MLB['lost_hc'].astype(int)
     # Calcular el porcentaje de victorias
     MLB['%WIN-HC'] = round(MLB['win_hc'] / (MLB['win_hc'] + MLB['lost_hc']),3)
-
     MLB[['win_v', 'lost_v']] = MLB['RECORD VISITANTE'].str.split('-', expand=True)
-    # Convertir las nuevas columnas a números enteros
+    # volvemos a transformar a enteros
     MLB['win_v'] = MLB['win_v'].astype(int)
     MLB['lost_v'] = MLB['lost_v'].astype(int)
     MLB["CA"] = MLB['CA'].astype(int)
@@ -120,13 +116,12 @@ def records():
     MLB['%WIN-V'] = round(MLB['win_v'] / (MLB['win_v'] + MLB['lost_v']),3)
     MLB["%CA"] = round(MLB['CA'] / (MLB['WINS'] + MLB['LOSSES']),2)
     MLB["%CP"] = round(MLB['CP'] / (MLB['WINS'] + MLB['LOSSES']),2)
-    # Reemplazar los nombres completos por los disminutivos en el dataframe
+    # Borramos las columnas que ya no son importantes
     MLB.drop(columns=['RECORD HOMECLUB','RECORD VISITANTE', "win_hc","lost_hc","win_v","lost_v",'CA','CP'],inplace=True)
+    # Reorganizamos el DF
     MLB = MLB[['TEAM', 'LIGA', 'WINS','LOSSES','%CA','%CP','%WIN','%WIN-HC','%WIN-V','AVG_TEAM']]
-    
-
+    # Mapeamos para cambiar los nombres de los equipos por sus disminutivo
     MLB["TEAM"] = MLB["TEAM"].map(team_mapping)
-
     return MLB
 
 print(records())
