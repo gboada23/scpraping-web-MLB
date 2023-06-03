@@ -44,7 +44,7 @@ def records():
     session = HTMLSession()
     url = f'https://www.mlb.com/standings/mlb/{fecha}'
     response = session.get(url)
-    response.html.render(timeout=10)
+    response.html.render(timeout=20)
     teams = response.html.find('tr')
     data = []
     for team in teams:
@@ -112,10 +112,14 @@ def records():
     # Convertir las nuevas columnas a números enteros
     MLB['win_v'] = MLB['win_v'].astype(int)
     MLB['lost_v'] = MLB['lost_v'].astype(int)
+    MLB["CA"] = MLB['CA'].astype(int)
+    MLB['CP'] = MLB["CP"].astype(int)
+    MLB['WINS'] = MLB["WINS"].astype(int)
+    MLB['LOSSES'] = MLB["LOSSES"].astype(int)
     # Calcular el porcentaje de victorias
     MLB['%WIN-V'] = round(MLB['win_v'] / (MLB['win_v'] + MLB['lost_v']),3)
-    MLB["%CA"] = round(MLB['CA'] / (MLB['WINS'] + MLB['LOSSES']),3)
-    MLB["%CP"] = round(MLB['CP'] / (MLB['WINS'] + MLB['LOSSES']),3)
+    MLB["%CA"] = round(MLB['CA'] / (MLB['WINS'] + MLB['LOSSES']),2)
+    MLB["%CP"] = round(MLB['CP'] / (MLB['WINS'] + MLB['LOSSES']),2)
     # Reemplazar los nombres completos por los disminutivos en el dataframe
     MLB.drop(columns=['RECORD HOMECLUB','RECORD VISITANTE', "win_hc","lost_hc","win_v","lost_v",'CA','CP'],inplace=True)
     MLB = MLB[['TEAM', 'LIGA', 'WINS','LOSSES','%CA','%CP','%WIN','%WIN-HC','%WIN-V','AVG_TEAM']]
