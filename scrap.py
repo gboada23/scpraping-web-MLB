@@ -1,20 +1,7 @@
 import requests
-from requests_html import HTMLSession
 from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
-
-def equipo_CP():
-    url = "https://www.mlb.com/es/stats/team/pitching"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
-    teams = [span.text for span in soup.select('span.full-3fV3c9pF')]
-    CP = []
-    carreras_permitidas = soup.find_all('td', {'class':'number-aY5arzrB align-right-3nN_D3xs is-table-pinned-1WfPW2jT', "data-col":13})
-    for carreras in carreras_permitidas:
-        CP.append(carreras.text)
-    DF = pd.DataFrame({"TEAM":teams, "CP":CP})
-    return DF
 
 def equipo_avg():
     url = "https://www.mlb.com/es/stats/team"
@@ -26,48 +13,8 @@ def equipo_avg():
     avgs = []
     for avg in avg_elements:
         if avg.get('data-col') == '14':
-            avgs.append(avg.text)
-    CA = []
-    carreras_anotadas = soup.find_all('td', {'class': 'col-group-end-2UJpJVwW number-aY5arzrB align-right-3nN_D3xs is-table-pinned-1WfPW2jT','data-col':9})
-    for i in carreras_anotadas:
-        CA.append(i.text)
-
-    df = pd.DataFrame({"TEAM": teams, "LIGA": leagues, "AVG_TEAM": avgs, "CA":CA})
-    df.AVG_TEAM = df.AVG_TEAM.astype(float)
-    CP = equipo_CP()
-    TEAM = pd.merge(df,CP,on="TEAM", how="inner")
-    return TEAM
-
-
-def records():
-    fecha = datetime.today().strftime("%Y-%m-%d")
-    session = HTMLSession()
-    url = f'https://www.mlb.com/standings/mlb/{fecha}'
-    response = session.get(url)
-    response.html.render(timeout=20)
-    teams = response.html.find('tr')
-    data = []
-    for team in teams:
-        team_link = team.find('span.team--name a.team.p-text-link--mlb', first=True)
-        if team_link is not None:
-            team_name = team_link.attrs['data-team-name']
-            wins = team.find('td.col-1', first=True).text
-            losses = team.find('td.col-2', first=True).text
-            win_percentage = team.find('td.col-3', first=True).text
-            home_record = team.find('td.col-12', first=True).text
-            away_record = team.find('td.col-13', first=True).text
-            data.append({
-                'TEAM': team_name,
-                'WINS': wins,
-                'LOSSES': losses,
-                '%WIN': win_percentage,
-                'RECORD HOMECLUB': home_record,
-                'RECORD VISITANTE': away_record})
-    df_recor = pd.DataFrame(data)
-    df_recor = df_recor.drop_duplicates()
-    df_equipo_avg = equipo_avg()
-    MLB = pd.merge(df_recor,df_equipo_avg, on="TEAM", how="inner")
-    # Mapeo de nombres completos a disminutivos
+            avgs.append(avg.text)  
+    df = pd.DataFrame({"TEAM": teams, "LIGA": leagues, "AVG_TEAM": avgs})
     team_mapping = {"Tampa Bay Rays": "TB",
     "Texas Rangers": "TEX",
     "Baltimore Orioles": "BAL",
@@ -95,9 +42,40 @@ def records():
     "Chicago Cubs": "CHC",
     "Washington Nationals": "WSH",
     "Colorado Rockies": "COL",
-    "Chicago White Sox": "CWS",
+    "Chicago White Sox": "CHW",
     "Kansas City Royals": "KC",
     "Oakland Athletics": "OAK"}
+    df["TEAM"] = df["TEAM"].map(team_mapping)
+    df.AVG_TEAM = df.AVG_TEAM.astype(float)
+    return df
+
+def ESPN():
+    url = "https://www.espn.com/mlb/standings/_/group/overall"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+    tds = soup.find("tbody", {"class": "Table__TBODY"})
+
+    span = tds.find_all("a", {"class":"AnchorLink"})
+    data = [i.text for i in span]
+    new_data = []
+    for elemento in data:
+        if len(elemento)>=2 and len(elemento)<=3:
+            new_data.append(elemento)
+    df1 = pd.DataFrame({"TEAM":new_data})
+    # Encontrar todos los elementos span con clase stat-cell
+    spans = soup.findAll('span', {'class': 'stat-cell'})
+
+    # Extraer el texto de cada span y almacenarlo en una lista
+    span_data = [span.text for span in spans]
+
+    # Dividir la lista span_data en sublistas de longitud 11
+    team_data = [span_data[i:i + 11] for i in range(0, len(span_data), 11)]
+
+    # Crear un DataFrame con los datos recopilados
+    columns = ["WINS", "LOSES", "%WIN", "DIFERENCIA", "RECORD HOMECLUB", "RECORD VISITANTE", "CA", "CP", "DIFERENCIA 2", "RACHA", "LAST-10"]
+    df2 = pd.DataFrame(team_data, columns=columns)
+    df2.drop(columns=['DIFERENCIA','DIFERENCIA 2'],inplace=True)
+    MLB = pd.concat([df1, df2], axis=1)
     MLB[['win_hc', 'lost_hc']] = MLB['RECORD HOMECLUB'].str.split('-', expand=True)
     # Convertimos las nuevas columnas a enteros
     MLB['win_hc'] = MLB['win_hc'].astype(int)
@@ -111,17 +89,15 @@ def records():
     MLB["CA"] = MLB['CA'].astype(int)
     MLB['CP'] = MLB["CP"].astype(int)
     MLB['WINS'] = MLB["WINS"].astype(int)
-    MLB['LOSSES'] = MLB["LOSSES"].astype(int)
+    MLB['LOSES'] = MLB["LOSES"].astype(int)
     # Calcular el porcentaje de victorias
     MLB['%WIN-V'] = round(MLB['win_v'] / (MLB['win_v'] + MLB['lost_v']),3)
-    MLB["%CA"] = round(MLB['CA'] / (MLB['WINS'] + MLB['LOSSES']),2)
-    MLB["%CP"] = round(MLB['CP'] / (MLB['WINS'] + MLB['LOSSES']),2)
-    # Borramos las columnas que ya no son importantes
-    MLB.drop(columns=['RECORD HOMECLUB','RECORD VISITANTE', "win_hc","lost_hc","win_v","lost_v",'CA','CP'],inplace=True)
-    # Reorganizamos el DF
-    MLB = MLB[['TEAM', 'LIGA', 'WINS','LOSSES','%CA','%CP','%WIN','%WIN-HC','%WIN-V','AVG_TEAM']]
-    # Mapeamos para cambiar los nombres de los equipos por sus disminutivo
-    MLB["TEAM"] = MLB["TEAM"].map(team_mapping)
-    return MLB
+    MLB["%CA"] = round(MLB['CA'] / (MLB['WINS'] + MLB['LOSES']),2)
+    MLB["%CP"] = round(MLB['CP'] / (MLB['WINS'] + MLB['LOSES']),2)
+    MLB.drop(columns=['CA','CP', "win_hc","lost_hc","win_v","lost_v","RECORD HOMECLUB","RECORD VISITANTE"],inplace=True)
+    DF1 = equipo_avg()
+    DF = pd.merge(MLB, DF1, on="TEAM", how="left")
+    return DF
 
-print(records())
+print(ESPN())
+
