@@ -1,7 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
+import re
 
 def equipo_avg():
     url = "https://www.mlb.com/es/stats/team"
@@ -89,6 +90,7 @@ def ESPN():
     MLB["CA"] = MLB['CA'].astype(int)
     MLB['CP'] = MLB["CP"].astype(int)
     MLB['WINS'] = MLB["WINS"].astype(int)
+    MLB['%WIN'] = MLB["%WIN"].astype(float)
     MLB['LOSES'] = MLB["LOSES"].astype(int)
     # Calcular el porcentaje de victorias
     MLB['%WIN-V'] = round(MLB['win_v'] / (MLB['win_v'] + MLB['lost_v']),3)
@@ -97,7 +99,19 @@ def ESPN():
     MLB.drop(columns=['CA','CP', "win_hc","lost_hc","win_v","lost_v","RECORD HOMECLUB","RECORD VISITANTE"],inplace=True)
     DF1 = equipo_avg()
     DF = pd.merge(MLB, DF1, on="TEAM", how="left")
+    DF = DF[["TEAM","LIGA","WINS","LOSES","%WIN","%WIN-HC","%WIN-V","%CA","%CP","AVG_TEAM","RACHA","LAST-10"]]
+    DF = DF.rename(columns={'%CA': 'SCORED/GAME', '%CP': 'ALLOWED/GAME'})
     return DF
 
-print(ESPN())
+def resultados():
+    fecha_actual = datetime.now()   
+    fecha_ayer = fecha_actual - timedelta(days=1)
+    fecha_ayer = fecha_ayer.strftime("%Y%m%d")
+    url = f"https://www.espn.com/mlb/schedule/_/date/{fecha_ayer}"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+    result_element = soup.find_all("td", class_="teams__col Table__TD")
+    #match = result_element.find_all("a", {"class":"AnchorLink"})
+    return result_element
+print(resultados())
 

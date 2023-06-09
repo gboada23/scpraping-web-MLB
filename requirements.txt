@@ -1,6 +1,7 @@
 bs4
 pandas
 requests
-lxml
-html5lib
-requests_html
+streamlit
+seaborn
+plotly
+matplotlib
