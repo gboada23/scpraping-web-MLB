@@ -1,48 +1,85 @@
-from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import numpy as np
 
-# URL de búsqueda base
-def juegos_del_dia():
-    # URL de búsqueda base
-    base_url = "https://www.mlb.com/scores/"
-    # Obtener la fecha de hoy
-    fecha_actual = datetime.today()
-    busqueda_url = fecha_actual.strftime("%Y-%m-%d")
-    # Realizar GET
-    url_completa = base_url + busqueda_url
-    respuesta = requests.get(url_completa)
-    data = BeautifulSoup(respuesta.content, "html.parser")
-    # Extraer info de la página
-    buscar_resultados = data.find_all("div", class_="grid-itemstyle__GridItemWrapper-sc-cq9wv2-0 gmoPjI")
+def lideres(lado):
+    url = "https://www.espn.com/mlb/stats"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, "html.parser")
+    stat_table = soup.find("div", class_=f"InnerLayout__child {lado}")
+    stat_rows = stat_table.find_all("tr")
+    rankin = list()
+    players = list()
+    teams = list()
+    stats = list()
+    for row in stat_rows:
+        # Encuentra todos los elementos 'span' con la clase 'leaderCell__playerRank'
+        player_ranks = row.find_all('span', class_='leaderCell__playerRank')
+        # Ahora puedes hacer algo con cada player_rank en player_ranks
+        for rank in player_ranks:
+            rankin.append(rank.text)  # Imprime el texto del elemento
+        player_images = row.find_all('img')
+        # Para cada imagen en las imágenes de los jugadores
+        for img in player_images:
+        # Imprime el valor del atributo 'title'
+            players.append(img.get('title'))
+        teams_names = row.find_all('span', class_="pl2 n10 leaderCell__teamAbbrev")
 
-    resultados = []
-
-    for resultado in buscar_resultados:
-        texto = resultado.find("div", class_="StatusLayerstyle__StatusLayerWrapper-sc-1s2c2o8-1 jkfZwE")
-        equipos = resultado.find_all("div", class_="TeamWrappersstyle__DesktopTeamWrapper-sc-uqs6qh-0 fdaoCu")
-        puntajes = resultado.find_all("td", class_="table-cellstyle__StyledTableCell-sc-xpntj7-2 ljCIPI")
-        pitchers = resultado.find_all("div", class_="playerMatchupstyle__PlayerNameWrapper-sc-u51t3a-4 dsJFMP trk-playermatchup-name")
-        eras = resultado.find_all("span", class_="PlayerMatchupsstyle__PlayeStatsContentWrapper-sc-1l2t29f-0 gYSWCv")
-        if texto is not None:
-            if len(puntajes) <6:
-                efectividad = [era.text for era in eras]
-                lanzadores = [pitcher.text for pitcher in pitchers]
-                resultados.append({
-                    "Pitcher V":lanzadores[0],
-                    "W-L V":efectividad[0],
-                    "Era 1": efectividad[1],
-                    "Pitchers HC": lanzadores[1],
-                    "W-L HC":efectividad[2],
-                    "Era 2": efectividad[3]
-                })
-    df = pd.DataFrame(resultados)
-    df['Era 1'] = df['Era 1'].str.replace(' ERA', '').str.replace('|', '')
-    df['Era 2'] = df['Era 2'].str.replace(' ERA', '').str.replace('|', '')
-    numericas = ["Era 1","Era 2"]
-    for i in numericas:
-        df[i] = df[i].astype(float)
+        for team in teams_names:
+            teams.append(team.text)
+            
+        stats_players = row.find_all("td", class_= "Table__TD")
+        for stat in stats_players:
+            stats.append(stat.text)
+            
+    stats = [item for item in stats if item.replace('.', '', 1).isdigit()]
+    df = pd.DataFrame({"Rank":rankin, "Playes":players, "Teams":teams, "stats":stats})
     return df
-                
-print(juegos_del_dia())
+
+def get_batting_leaders():
+    df = lideres("leftColumn")
+    dfs = np.array_split(df, 5)
+    leaders_batting = []
+    lead_avg = dfs[0]
+    lead_avg = lead_avg.rename(columns={'stats': 'AVG'})
+    lead_hr = dfs[1]
+    lead_hr = lead_hr.rename(columns={'stats': 'HR'})
+    lead_rbi = dfs[2]
+    lead_rbi = lead_rbi.rename(columns={'stats': 'RBI'})
+    lead_h = dfs[3]
+    lead_h = lead_h.rename(columns={'stats': 'HITS'})
+    lead_sb = dfs[4]
+    lead_sb = lead_sb.rename(columns={'stats': 'SB'})
+    # Añadir las variables a la lista
+    leaders_batting.append(lead_avg)
+    leaders_batting.append(lead_hr)
+    leaders_batting.append(lead_rbi)
+    leaders_batting.append(lead_h)
+    leaders_batting.append(lead_sb)
+    return leaders_batting
+
+def get_pitching_leaders():
+    df = lideres("rightColumn")
+    dfs = np.array_split(df, 5)
+    leaders_pitching = []
+    lead_wins = dfs[0]
+    lead_wins = lead_wins.rename(columns={'stats': 'WINS'})
+    lead_era = dfs[1]
+    lead_era = lead_era.rename(columns={'stats': 'ERA'})
+    lead_sv = dfs[2]
+    lead_sv = lead_sv.rename(columns={'stats': 'SV'})
+    lead_k = dfs[3]
+    lead_k = lead_k.rename(columns={'stats': 'K'})
+    lead_qs = dfs[4]
+    lead_qs = lead_qs.rename(columns={'stats': 'QS'})
+    # Añadir los df a la lista
+    leaders_pitching.append(lead_wins)
+    leaders_pitching.append(lead_era)
+    leaders_pitching.append(lead_sv)
+    leaders_pitching.append(lead_k)
+    leaders_pitching.append(lead_qs)
+    return leaders_pitching
+
+print(get_batting_leaders())
+print(get_pitching_leaders())
