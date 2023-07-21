@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime, timedelta
 from PIL import Image
+import numpy as np
 class equipos:
     def __init__(self) -> None:
         pass
@@ -314,3 +315,74 @@ class equipos:
                 team_logos[team_name] = logo_url
         return team_logos
     
+class jugadores:
+    def __init__(self, url="https://www.espn.com/mlb/stats"):
+        self.url = url
+
+    def lideres(self, lado):
+        response = requests.get(self.url)
+        soup = BeautifulSoup(response.content, "html.parser")
+        stat_table = soup.find("div", class_=f"InnerLayout__child {lado}")
+        stat_rows = stat_table.find_all("tr")
+        rankin = list()
+        players = list()
+        teams = list()
+        stats = list()
+        for row in stat_rows:
+            player_ranks = row.find_all('span', class_='leaderCell__playerRank')
+            for rank in player_ranks:
+                rankin.append(rank.text)
+            player_images = row.find_all('img')
+            for img in player_images:
+                players.append(img.get('title'))
+            teams_names = row.find_all('span', class_="pl2 n10 leaderCell__teamAbbrev")
+            for team in teams_names:
+                teams.append(team.text)
+            stats_players = row.find_all("td", class_= "Table__TD")
+            for stat in stats_players:
+                stats.append(stat.text)
+        stats = [item for item in stats if item.replace('.', '', 1).isdigit()]
+        df = pd.DataFrame({"Rank":rankin, "Playes":players, "Teams":teams, "stats":stats})
+        return df
+
+    def get_batting_leaders(self):
+        df = self.lideres("leftColumn")
+        dfs = np.array_split(df, 5)
+        leaders_batting = []
+        lead_avg = dfs[0]
+        lead_avg = lead_avg.rename(columns={'stats': 'AVG'})
+        lead_hr = dfs[1]
+        lead_hr = lead_hr.rename(columns={'stats': 'HR'})
+        lead_rbi = dfs[2]
+        lead_rbi = lead_rbi.rename(columns={'stats': 'RBI'})
+        lead_h = dfs[3]
+        lead_h = lead_h.rename(columns={'stats': 'HITS'})
+        lead_sb = dfs[4]
+        lead_sb = lead_sb.rename(columns={'stats': 'SB'})
+        leaders_batting.append(lead_avg)
+        leaders_batting.append(lead_hr)
+        leaders_batting.append(lead_rbi)
+        leaders_batting.append(lead_h)
+        leaders_batting.append(lead_sb)
+        return leaders_batting
+
+    def get_pitching_leaders(self):
+        df = self.lideres("rightColumn")
+        dfs = np.array_split(df, 5)
+        leaders_pitching = []
+        lead_wins = dfs[0]
+        lead_wins = lead_wins.rename(columns={'stats': 'WINS'})
+        lead_era = dfs[1]
+        lead_era = lead_era.rename(columns={'stats': 'ERA'})
+        lead_sv = dfs[2]
+        lead_sv = lead_sv.rename(columns={'stats': 'SV'})
+        lead_k = dfs[3]
+        lead_k = lead_k.rename(columns={'stats': 'K'})
+        lead_qs = dfs[4]
+        lead_qs = lead_qs.rename(columns={'stats': 'QS'})
+        leaders_pitching.append(lead_wins)
+        leaders_pitching.append(lead_era)
+        leaders_pitching.append(lead_sv)
+        leaders_pitching.append(lead_k)
+        leaders_pitching.append(lead_qs)
+        return leaders_pitching

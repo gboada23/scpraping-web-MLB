@@ -6,3 +6,4 @@ seaborn
 plotly
 matplotlib
 pillow
+numpy
