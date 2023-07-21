@@ -1,0 +1,1 @@
+# archivo para ejecutar mini scripts antes de pasarlo al archivo correspondiente

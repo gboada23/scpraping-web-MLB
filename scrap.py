@@ -19,6 +19,7 @@ class equipos:
             if avg.get('data-col') == '14':
                 avgs.append(avg.text)  
         df = pd.DataFrame({"TEAM": teams, "LIGA": leagues, "AVG_TEAM": avgs})
+        # creamos un diccionario con disminutivos para hacer un mapeo y cambiar nombres del equipo por disminutivos
         team_mapping = {"Tampa Bay Rays": "TB",
         "Texas Rangers": "TEX",
         "Baltimore Orioles": "BAL",
@@ -95,7 +96,7 @@ class equipos:
         MLB['WINS'] = MLB["WINS"].astype(int)
         MLB['%WIN'] = MLB["%WIN"].astype(float)
         MLB['LOSES'] = MLB["LOSES"].astype(int)
-        # Calcular el porcentaje de victorias
+        # Calcular el porcentaje de victorias, carreras anotadas y carreras permitidas
         MLB['%WIN-V'] = round(MLB['win_v'] / (MLB['win_v'] + MLB['lost_v']),3)
         MLB["%CA"] = round(MLB['CA'] / (MLB['WINS'] + MLB['LOSES']),2)
         MLB["%CP"] = round(MLB['CP'] / (MLB['WINS'] + MLB['LOSES']),2)
@@ -115,16 +116,14 @@ class equipos:
         resultados = []
         resultados1 = []
 
-        for i in range(1,6,1):
+        for i in range(1,11,1):
             # Obtener la fecha de búsqueda
             fecha_busqueda = fecha_actual - timedelta(days=i)
             busqueda_url = fecha_busqueda.strftime("%Y-%m-%d")
-            
             # Realizar GET
             url_completa = base_url + busqueda_url
             respuesta = requests.get(url_completa)
             data = BeautifulSoup(respuesta.content, "html.parser")
-            
             # Extraer info de la página
             buscar_resultados = data.find_all("div", class_="grid-itemstyle__GridItemWrapper-sc-cq9wv2-0 gmoPjI")
 
@@ -148,37 +147,10 @@ class equipos:
                             'H2': puntajes[4].text.strip(),
                             'E2': puntajes[5].text.strip()
                         })
-                    else:
-                        equipo1 = equipos[0]
-                        equipo2 = equipos[1]
-                        resultados1.append({
-                            'Fecha': busqueda_url,
-                            'Hora del juego': texto.text.strip(),
-                            'Visitante': equipo1.text.strip(),
-                            'R1': 0,
-                            'H1': 0,
-                            'E1': 0,
-                            'Home Club': equipo2.text.strip(),
-                            'R2': 0,
-                            'H2': 0,
-                            'E2': 0
-                        })
-                else:
-                    resultados.append({
-                        'Fecha': busqueda_url,
-                        'Titulo': 'Sin juegos para el dia de hoy',
-                        'Equipo 1': None,
-                        'R1': None,
-                        'H1': None,
-                        'E1': None,
-                        'Equipo 2': None,
-                        'R2': None,
-                        'H2': None,
-                        'E2': None
-                    })
-
-        return pd.DataFrame(resultados), pd.DataFrame(resultados1)
-
+        df = pd.DataFrame(resultados)
+        df["Titulo"] = df["Titulo"].str.replace('Free Game of the Day', '')
+        return df
+    
     def juegos_del_dia(self):
         # URL de búsqueda base
         base_url = "https://www.mlb.com/scores/"
@@ -242,7 +214,6 @@ class equipos:
         if len(resultados)>0:
             comenzados = pd.DataFrame(resultados)
             comenzados["Titulo"] = comenzados['Titulo'].str.replace('Free Game of the Day', '')
-            comenzados["Titulo"] = comenzados['Titulo'].str.replace('Top', 'Alta')
             return comenzados
         elif len(resultados1)>0:
             sin_empezar = pd.DataFrame(resultados1)        
