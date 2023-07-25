@@ -5,6 +5,7 @@ from scrap import jugadores
 
 # LLAMAMOS LA CLASE EQUIPOS Y SUS METODOS
 teams = equipos()
+
 stats_by_teams = teams.stats()
 games_results = teams.resultados()
 days_games = teams.juegos_del_dia()
@@ -12,8 +13,9 @@ days_pitchers = teams.lanzadores_del_dia()
 before_game = teams.visitantes_homeclub()
 
 # LLAMAMOS LAS CLASES JUGADORES CON SUS METODOS
-lideres_bateadores = jugadores().get_batting_leaders()
-lideres_lanzadores = jugadores().get_pitching_leaders()
+players = jugadores()
+lideres_bateadores = players.get_batting_leaders()
+lideres_lanzadores = players.get_pitching_leaders()
 
 # OBTENEMOS CADA DF DE LIDERATO INDIVIDUAL para los bateadores
 lead_avg = lideres_bateadores[0]
@@ -31,3 +33,4 @@ lead_k = lideres_lanzadores[3]
 lead_qs = lideres_lanzadores[4]
 
 # aqui iremos realizando analisis sobre la marcha
+print(lead_wins)

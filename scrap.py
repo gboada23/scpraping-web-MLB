@@ -163,10 +163,8 @@ class equipos:
         data = BeautifulSoup(respuesta.content, "html.parser")
         # Extraer info de la página
         buscar_resultados = data.find_all("div", class_="grid-itemstyle__GridItemWrapper-sc-cq9wv2-0 gmoPjI")
-
         resultados = []
         resultados1 = []
-
         for resultado in buscar_resultados:
             texto = resultado.find("div", class_="StatusLayerstyle__StatusLayerWrapper-sc-1s2c2o8-1 jkfZwE")
             equipos = resultado.find_all("div", class_="TeamWrappersstyle__DesktopTeamWrapper-sc-uqs6qh-0 fdaoCu")
@@ -211,14 +209,21 @@ class equipos:
                     'H2': None,
                     'E2': None
                 })
-        if len(resultados)>0:
+        if len(resultados)>0 and len(resultados1)>0:
             comenzados = pd.DataFrame(resultados)
             comenzados["Titulo"] = comenzados['Titulo'].str.replace('Free Game of the Day', '')
-            return comenzados
-        elif len(resultados1)>0:
+            sin_empezar = pd.DataFrame(resultados1)        
+            sin_empezar["Hora"] = sin_empezar['Hora'].str.replace('Free Game of the Day', '')
+            return comenzados, sin_empezar
+        elif len(resultados)==0:
             sin_empezar = pd.DataFrame(resultados1)        
             sin_empezar["Hora"] = sin_empezar['Hora'].str.replace('Free Game of the Day', '')
             return sin_empezar
+        elif len(resultados1)==0:
+            comenzados = pd.DataFrame(resultados)
+            comenzados["Titulo"] = comenzados['Titulo'].str.replace('Free Game of the Day', '')
+            return comenzados
+
 
     def lanzadores_del_dia(self):
         # URL de búsqueda base
@@ -239,10 +244,19 @@ class equipos:
             puntajes = resultado.find_all("td", class_="table-cellstyle__StyledTableCell-sc-xpntj7-2 ljCIPI")
             pitchers = resultado.find_all("div", class_="playerMatchupstyle__PlayerNameWrapper-sc-u51t3a-4 dsJFMP trk-playermatchup-name")
             eras = resultado.find_all("span", class_="PlayerMatchupsstyle__PlayeStatsContentWrapper-sc-1l2t29f-0 gYSWCv")
+            
             if texto is not None:
                 if len(puntajes) <6:
                     efectividad = [era.text for era in eras]
                     lanzadores = [pitcher.text for pitcher in pitchers]
+                    if len(lanzadores) == 1:
+                        lanzadores.append("Por definir") 
+                        efectividad.append(0)
+                        efectividad.append(float(0.000))
+                    elif len(lanzadores) == 0:
+                        lanzadores.extend(["Por definir", "Por definir"])
+                        efectividad.extend(["Por definir", "Por definir"])
+                        efectividad.extend(["Por definir", "Por definir"])
                     resultados.append({
                         "Pitcher V":lanzadores[0],
                         "W-L V":efectividad[0],
@@ -258,19 +272,23 @@ class equipos:
             numericas = ["Era 1","Era 2"]
             for i in numericas:
                 df[i] = df[i].astype(float)
+            df = df.fillna(0)
             return df
         else:
-            return "Ya comenzaron los juegos"
+            return "Ya comenzaron todos los juegos"
 
     def visitantes_homeclub(self):
-        if self.lanzadores_del_dia() != "Ya comenzaron los juegos":
-            df_concatenado = pd.concat([self.sin_empezar, self.lanzadores_del_dia()], axis=1)
+        lanzadores = self.lanzadores_del_dia()
+        comenzados, sin_empezar = self.juegos_del_dia()
+        lanzadores = self.lanzadores_del_dia()
+        if type(lanzadores) is pd.DataFrame:
+            df_concatenado = pd.concat([sin_empezar, lanzadores], axis=1)
             df_concatenado = df_concatenado[["Fecha","Hora","Visitante","Pitcher V","W-L V","Era 1","VS","Home Club","Pitchers HC","W-L HC","Era 2"]]
             visitante = df_concatenado[["Fecha","Hora","Visitante","Pitcher V","W-L V","Era 1"]]
             home_club = df_concatenado[["Fecha","Hora","Home Club","Pitchers HC","W-L HC","Era 2"]]
             return visitante, home_club
-        else:
-            return "Ya comenzaron los juegos"
+        elif type(lanzadores) is str:
+            return comenzados
 
     def get_team_logos(self):
         url = "https://www.mlb.com/team"
@@ -285,7 +303,6 @@ class equipos:
                 logo_url = "https:" + img["src"]
                 team_logos[team_name] = logo_url
         return team_logos
-    
 class jugadores:
     def __init__(self, url="https://www.espn.com/mlb/stats"):
         self.url = url
@@ -357,3 +374,5 @@ class jugadores:
         leaders_pitching.append(lead_k)
         leaders_pitching.append(lead_qs)
         return leaders_pitching
+    
+print(equipos().juegos_del_dia())
